@@ -8,8 +8,8 @@ const app = express();
 const webPort = 3000;
 const bashPort = 3001;
 
-const imagesPath = path.join(__dirname, "public/images");
-
+const imagesPath = path.join(__dirname, "public", "images");
+let imgCounter = 0;
 app.use(express.static("public"));
 app.use(express.static("css"));
 app.use(express.static("js"));
@@ -43,6 +43,51 @@ app.get("/images/:imageName", (req, res) => {
   });
 });
 
+app.get("/photo", async (req, res) => {
+  try {
+    // Adjust the command to be executed here
+    const commandToExecute = `curl -o image${imgCounter++}.png  https://via.placeholder.com/550x250`;
+
+    // Execute the Bash command
+    await executeBashCommand(commandToExecute);
+
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end(`Bash command executed: ${commandToExecute}`);
+  } catch (err) {
+    console.error("Error reading images directory:", err);
+    res.status(500).send("Error reading images directory");
+  }
+});
+
+app.post("/upload", express.json(), async (req, res) => {
+  try {
+    const { image } = req.body;
+    if (!image) {
+      return res
+        .status(400)
+        .json({ error: "No image data found in the request body" });
+    }
+
+    // Decode the Base64 image data
+    const imageData = image.replace(/^data:image\/jpeg;base64,/, "");
+
+    // Create a unique filename using a timestamp
+    const filename = `photo_${Date.now()}.jpeg`;
+    const imagePath = path.join(imagesPath, filename);
+
+    // Save the image to the server
+    fs.writeFileSync(imagePath, imageData, "base64");
+
+    console.log("Image uploaded:", filename);
+    res.status(200).json({ filename }); // Respond with JSON containing the filename
+  } catch (err) {
+    console.error("Error handling image upload:", err);
+    res
+      .status(500)
+      .json({ error: "An error occurred while handling the image upload" });
+  }
+});
+
 const server = http.createServer(app);
 
 // Start listening for the website on port 3000
@@ -51,8 +96,10 @@ server.listen(webPort, () => {
 });
 
 // Function to execute the Bash command
-function executeBashCommand(command) {
-  const bash = spawn("bash", ["-c", command]);
+async function executeBashCommand(command) {
+  const bash = spawn("bash", ["-c", command], {
+    cwd: imagesPath,
+  });
 
   bash.stdout.on("data", (data) => {
     console.log(`Bash command output: ${data}`);
@@ -62,23 +109,10 @@ function executeBashCommand(command) {
     console.error(`Bash command error: ${data}`);
   });
 
-  bash.on("close", (code) => {
-    console.log(`Bash command process exited with code ${code}`);
+  return await new Promise((resolve) => {
+    bash.on("close", (code) => {
+      console.log(`Bash command process exited with code ${code}`);
+      resolve();
+    });
   });
 }
-
-// Handle the request for the Bash command on port 3001
-http
-  .createServer((req, res) => {
-    // Adjust the command to be executed here
-    const commandToExecute = "ls -al";
-
-    // Execute the Bash command
-    executeBashCommand(commandToExecute);
-
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end(`Bash command executed: ${commandToExecute}`);
-  })
-  .listen(bashPort, () => {
-    console.log(`Bash server listening on port ${bashPort}`);
-  });
