@@ -1,7 +1,33 @@
 function clickButton() {
   document.getElementById("record-button").addEventListener("click", () => {
-    countdown();
+    embiggenVideo();
+    // setTimeout(() => {
+    //   shrinkVideo();
+    // }, 5000);
   });
+}
+
+function embiggenVideo() {
+  const videoElement = document.getElementById("webcam");
+  document.body.style.setProperty("opacity", "0");
+  setTimeout(() => {
+    document.body.style.removeProperty("opacity");
+    videoElement.setAttribute("width", "1920");
+    videoElement.setAttribute("height", "1080");
+    videoElement.classList.add("big");
+    countdown();
+  }, 500);
+}
+
+function shrinkVideo() {
+  const videoElement = document.getElementById("webcam");
+  document.body.style.setProperty("opacity", "0");
+  setTimeout(() => {
+    document.body.style.removeProperty("opacity");
+    videoElement.removeAttribute("width");
+    videoElement.removeAttribute("height");
+    videoElement.classList.remove("big");
+  }, 500);
 }
 
 function countdown() {
@@ -11,21 +37,24 @@ function countdown() {
   countContainer.style.setProperty("display", "flex");
   countContainer.appendChild(countdownElement);
 
-  let count = 0;
+  let count = 5;
   const intervalId = setInterval(async () => {
     countdownElement.textContent = count;
     count--;
-
     if (count < 0) {
       clearInterval(intervalId);
       countdownElement.innerHTML =
         "<div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>";
       countdownElement.classList.add("lds-roller");
       capturePhoto();
-      countContainer.removeChild(countdownElement);
+      countdownElement.innerHTML = "";
+      countdownElement.classList.remove("lds-roller");
+      countdownElement.classList.add("img-preview");
 
       setTimeout(() => {
+        shrinkVideo();
         countContainer.style.setProperty("display", "none");
+        countContainer.removeChild(countdownElement);
       }, 3000);
     }
   }, 1000);
@@ -66,7 +95,13 @@ async function loadImages() {
 }
 
 async function getWebcam(device) {
-  const videoConstraints = device ? { deviceId: device } : true;
+  const videoConstraints = device
+    ? {
+        deviceId: device,
+        width: 1920,
+        height: 1080,
+      }
+    : true;
   const stream = await navigator.mediaDevices.getUserMedia({
     video: videoConstraints,
   });
@@ -94,8 +129,6 @@ function gotDevices(mediaDevices) {
     getWebcam(select.value);
   });
 }
-
-function showPicture() {}
 
 function capturePhoto() {
   const videoElement = document.getElementById("webcam");
@@ -126,9 +159,8 @@ async function sendImageToServer(imageData) {
       const { filename } = data; // Get the filename from the response JSON
       console.log("Image uploaded successfully. Filename:", filename);
       loadImages(); // Load images after successful upload
-      const countContainer = document.getElementById("countdown-container");
-      countContainer.style.backgroundImage = `url(images/${filename})`;
-      return filename;
+      const countdown = document.getElementById("countdown");
+      countdown.style.backgroundImage = `url(images/${filename})`;
     } else {
       console.error(
         "Failed to upload image:",

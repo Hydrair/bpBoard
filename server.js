@@ -10,9 +10,11 @@ const bashPort = 3001;
 
 const imagesPath = path.join(__dirname, "public", "images");
 let imgCounter = 0;
+
 app.use(express.static("public"));
 app.use(express.static("css"));
 app.use(express.static("js"));
+app.use(express.json({ limit: "50mb" }));
 
 // Serve the website on port 3000
 app.get("/", (req, res) => {
