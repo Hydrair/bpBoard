@@ -4,36 +4,250 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mikeys Fotobox</title>
-  <link rel="stylesheet" href="./style.css">
-  <!-- <style type="text/css" rel="stylesheet" href="./style.css"></style> -->
+  <title>Leaderboard</title>
+  <style>
+    body{
+      font-family: 'Courier New', Courier, monospace;
+      background: #00aa77;
+      background-image: url("zenbg-1.png"), url("zenbg-2.png");
+      background-repeat: repeat-x, repeat;
+    }
+    h1{
+      color: honeydew
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: honeydew;
+    }
+
+    th,
+    td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
+
+    button {
+      margin: 20px 20px;
+      height: 40px;
+      width: 100%;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+    }
+
+    .modal-content {
+      background-color: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      height: 80%;
+      overflow: auto;
+    }
+
+    .close {
+      float: right;
+      cursor: pointer;
+    }
+    #saveButton{
+      width: -webkit-fill-available;
+      height: 40px;
+    }
+    .buttons{
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+    }
+  </style>
 </head>
 
 <body>
-  <main class="flex-container">
-    <div id="left">
-      <h1>Mikeys Fotobox</h1>
-      <select id="select">
-      </select>
-      <div id="placeholder"></div>
-      <video id="webcam"></video>
-
-      <div id="button-container">
-        <button id="record-button">Foto</button>
-      </div>
-    </div>
-
-    <div id="right">
-      <div class="photostream-container">
-        <!-- Placeholder images will be dynamically loaded here -->
-      </div>
-    </div>
-  </main>
-
-  <div id="countdown-container">
+  <h1>Beerpong Leaderboard 2023</h1>
+  <div class="buttons">
+    <button id="refreshButton" onclick="populateTable()">Refresh</button>
+    <button id="addGameButton" onclick="openModal()">Add game</button>
   </div>
 
-  <script src="index.js"></script>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>Name</th>
+        <th>Wins</th>
+        <th>Games</th>
+        <th>Winrate</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboardBody">
+      <!-- Table rows will be dynamically populated here -->
+    </tbody>
+  </table>
+  <div id="myModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <!-- Add game form goes here -->
+      <h2>Add Game</h2>
+      Winning Team:
+      <br>
+      <label for="team1">Team 1:</label>
+      <input type="radio" id="team1" name="team" value="Team 1">
+      <label for="team2">Team 2:</label>
+      <input type="radio" id="team2" name="team" value="Team 2">
+
+      <h3>Players:</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Team</th>
+          </tr>
+        </thead>
+        <tbody id="playerTableBody">
+          <!-- Player names and team selection dropdowns will be dynamically populated here -->
+        </tbody>
+      </table>
+      <button id="saveButton" onclick="saveGame()">Save</button>
+
+    </div>
+  </div>
+  </div>
+
+  <script>
+    let players;
+    // Function to open the modal
+    function openModal() {
+      document.getElementById('myModal').style.display = 'block';
+    }
+
+    // Function to close the modal
+    function closeModal() {
+      document.getElementById('myModal').style.display = 'none';
+    }
+
+    // Function to populate the table from the "/users" endpoint
+    function populateTable() {
+      // Clear existing table rows
+      document.getElementById('leaderboardBody').innerHTML = '';
+
+      // Fetch data from the "/users" endpoint
+      fetch('/users')
+        .then(response => response.json())
+        .then(data => {
+          players = data
+          data.sort((a,b)=>  a.wins > b.wins ? -1 : 1)
+          // Loop through the data and create table rows
+          data.forEach((user, index) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                          <td>${index + 1}</td>
+                          <td>${user.name}</td>
+                          <td>${user.wins}</td>
+                          <td>${user.games}</td>
+                          <td>${(user.wins / user.games * 100).toFixed(2)}%</td>
+                      `;
+            document.getElementById('leaderboardBody').appendChild(row);
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching data:', error);
+        });
+    }
+    // Function to populate the player table and dropdowns in the modal
+    function populatePlayerTable() {
+      const playerTableBody = document.getElementById('playerTableBody');
+      playerTableBody.innerHTML = '';
+
+      // Loop through the leaderboard data and create rows in the player table
+      // along with dropdowns for team selection
+      players.forEach((user) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+                    <td>${user.name}</td>
+                    <td>
+                        <select>
+                            <option value="No game">No game</option>
+                            <option value="Team 1">Team 1</option>
+                            <option value="Team 2">Team 2</option>
+                        </select>
+                    </td>
+                `;
+        playerTableBody.appendChild(row);
+      });
+    }
+
+    
+ // Function to save the game
+function saveGame() {
+    const selectedTeam = document.querySelector('input[name="team"]:checked').value;
+
+    const playerRows = document.querySelectorAll('#playerTableBody tr');
+    const winners = [];
+    const players = [];
+
+    playerRows.forEach((row) => {
+        const playerName = row.querySelector('td:first-child').textContent;
+        const selectedPlayerTeam = row.querySelector('select').value;
+console.log(selectedPlayerTeam);
+        if (selectedPlayerTeam === 'Team 1' || selectedPlayerTeam === 'Team 2') {
+          players.push(playerName)
+            // Only include players who have selected a team
+            if (selectedPlayerTeam === selectedTeam) {
+                winners.push(playerName);
+            }
+        }
+    });
+
+    if (winners.length === 0) {
+        console.error('No winners selected for the chosen team');
+        return;
+    }
+    const gameData = {
+      winners: winners,
+      players: players
+    };
+    console.log(gameData);
+
+    fetch('/save', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(gameData),
+    })
+    .then(response => {
+        if (response.ok) {
+            closeModal(); // Close the modal upon successful save
+            populateTable(); // Refresh the leaderboard
+        } else {
+            console.error('Error saving data:', response.statusText);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving data:', error);
+    });
+}
+
+
+    document.getElementById('addGameButton').addEventListener('click', function () {
+      openModal();
+      populatePlayerTable();
+    });
+    populateTable()
+  </script>
 </body>
 
 </html>
