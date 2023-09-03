@@ -1,20 +1,20 @@
 const http = require("http");
 const express = require("express");
-const { spawn } = require("child_process");
+const { format } = require('date-fns'); // Import date-fns for timestamp formatting
 const path = require("path");
 const fs = require("fs");
 
 const app = express();
-const webPort = 3000;
-const bashPort = 3001;
-
-const imagesPath = path.join(__dirname, "public", "images");
-let imgCounter = 0;
+const webPort = process.env.PORT || 80;
 
 app.use(express.static("public"));
 app.use(express.static("css"));
 app.use(express.static("js"));
 app.use(express.json({ limit: "50mb" }));
+
+function getTimestamp() {
+  return format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+}
 
 // Serve the website on port 3000
 app.get("/", (req, res) => {
@@ -22,72 +22,57 @@ app.get("/", (req, res) => {
   res.sendFile(htmlFilePath);
 });
 
-app.get("/images", async (req, res) => {
-  try {
-    const imageFiles = fs.readdirSync(imagesPath);
-    const imagePaths = imageFiles.map((file) => `/images/${file}`);
-    res.json(imagePaths);
-  } catch (err) {
-    console.error("Error reading images directory:", err);
-    res.status(500).send("Error reading images directory");
-  }
-});
-
-app.get("/images/:imageName", (req, res) => {
-  const { imageName } = req.params;
-  const imagePath = path.join(imagesPath, imageName);
-
-  res.sendFile(imagePath, (err) => {
+app.get("/users", (req, res) => {
+  res.sendFile(path.join(__dirname +'/scores.json'), (err) => {
     if (err) {
-      console.error("Error serving image:", err);
-      res.status(404).send("Image not found");
+      console.error("Error serving json:", err);
+      res.status(404).send("JSON   not found");
     }
   });
 });
 
-app.get("/photo", async (req, res) => {
-  try {
-    // Adjust the command to be executed here
-    const commandToExecute = `curl -o image${imgCounter++}.png  https://via.placeholder.com/550x250`;
+app.post('/save', (req, res) => {
+  const gameData = req.body;
+  const logEntry = `[${getTimestamp()}] Game Data: ${JSON.stringify(gameData)}\n`;
+  fs.appendFile('games.log', logEntry, (err) => {
+      if (err) {
+          console.error('Error logging game data:', err);
+      }
+  });
+  // Read the existing player data from scores.json
+  fs.readFile('scores.json', 'utf8', (err, data) => {
+      if (err) {
+          console.error('Error reading scores.json:', err);
+          return res.status(500).json({ error: 'Internal server error' });
+      }
 
-    // Execute the Bash command
-    await executeBashCommand(commandToExecute);
+      const playerData = JSON.parse(data);
 
-    res.writeHead(200, { "Content-Type": "text/plain" });
-    res.end(`Bash command executed: ${commandToExecute}`);
-  } catch (err) {
-    console.error("Error reading images directory:", err);
-    res.status(500).send("Error reading images directory");
-  }
-});
+      const players = gameData.players;
+      playerData.forEach((player) => {
+        if (players.includes(player.name)) {
+            player.games++;
+        }
+    });
 
-app.post("/upload", express.json(), async (req, res) => {
-  try {
-    const { image } = req.body;
-    if (!image) {
-      return res
-        .status(400)
-        .json({ error: "No image data found in the request body" });
-    }
+      // Increment wins for players in the winners array
+      const winners = gameData.winners;
+      playerData.forEach((player) => {
+          if (winners.includes(player.name)) {
+              player.wins++;
+          }
+      });
 
-    // Decode the Base64 image data
-    const imageData = image.replace(/^data:image\/jpeg;base64,/, "");
+      // Write the updated player data back to scores.json
+      fs.writeFile('scores.json', JSON.stringify(playerData), (err) => {
+          if (err) {
+              console.error('Error writing scores.json:', err);
+              return res.status(500).json({ error: 'Internal server error' });
+          }
 
-    // Create a unique filename using a timestamp
-    const filename = `photo_${Date.now()}.jpeg`;
-    const imagePath = path.join(imagesPath, filename);
-
-    // Save the image to the server
-    fs.writeFileSync(imagePath, imageData, "base64");
-
-    console.log("Image uploaded:", filename);
-    res.status(200).json({ filename }); // Respond with JSON containing the filename
-  } catch (err) {
-    console.error("Error handling image upload:", err);
-    res
-      .status(500)
-      .json({ error: "An error occurred while handling the image upload" });
-  }
+          res.status(200).json({ message: 'Game data saved successfully' });
+      });
+  });
 });
 
 const server = http.createServer(app);
@@ -96,25 +81,3 @@ const server = http.createServer(app);
 server.listen(webPort, () => {
   console.log(`Website server listening on port ${webPort}`);
 });
-
-// Function to execute the Bash command
-async function executeBashCommand(command) {
-  const bash = spawn("bash", ["-c", command], {
-    cwd: imagesPath,
-  });
-
-  bash.stdout.on("data", (data) => {
-    console.log(`Bash command output: ${data}`);
-  });
-
-  bash.stderr.on("data", (data) => {
-    console.error(`Bash command error: ${data}`);
-  });
-
-  return await new Promise((resolve) => {
-    bash.on("close", (code) => {
-      console.log(`Bash command process exited with code ${code}`);
-      resolve();
-    });
-  });
-}
