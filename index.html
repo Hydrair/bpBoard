@@ -86,10 +86,10 @@
     <thead>
       <tr>
         <th>Rank</th>
-        <th>Name</th>
-        <th>Wins</th>
-        <th>Games</th>
-        <th>Winrate</th>
+        <th onclick="populateTable('name')">Name</th>
+        <th onclick="populateTable('wins')">Wins</th>
+        <th onclick="populateTable('games')">Games</th>
+        <th onclick="populateTable('winrate')">Winrate</th>
       </tr>
     </thead>
     <tbody id="leaderboardBody">
@@ -139,7 +139,7 @@
     }
 
     // Function to populate the table from the "/users" endpoint
-    function populateTable() {
+    function populateTable(sortBy='wins') {
       // Clear existing table rows
       document.getElementById('leaderboardBody').innerHTML = '';
 
@@ -148,7 +148,13 @@
         .then(response => response.json())
         .then(data => {
           players = data
-          data.sort((a,b)=>  a.wins > b.wins ? -1 : 1)
+          data.sort((a,b)=>  {
+            if( sortBy === 'winrate'){
+              return (a.wins/a.games) > (b.wins/b.games) ? -1 : 1
+            } else {
+              return a[sortBy] > b[sortBy] ? -1 : 1
+            }
+          })
           // Loop through the data and create table rows
           data.forEach((user, index) => {
             const row = document.createElement('tr');
