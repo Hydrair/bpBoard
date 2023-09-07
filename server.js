@@ -34,7 +34,7 @@ app.get("/users", (req, res) => {
 app.post('/save', (req, res) => {
   const gameData = req.body;
   const logEntry = `[${getTimestamp()}] Game Data: ${JSON.stringify(gameData)}\n`;
-  fs.appendFile('games.log', logEntry, (err) => {
+  fs.appendFile(path.join(__dirname +'/stats/games.log'), logEntry, (err) => {
       if (err) {
           console.error('Error logging game data:', err);
       }
@@ -64,7 +64,7 @@ app.post('/save', (req, res) => {
       });
 
       // Write the updated player data back to scores.json
-      fs.writeFile('scores.json', JSON.stringify(playerData), (err) => {
+      fs.writeFile(path.join(__dirname +'/stats/scores.json'), JSON.stringify(playerData), (err) => {
           if (err) {
               console.error('Error writing scores.json:', err);
               return res.status(500).json({ error: 'Internal server error' });
