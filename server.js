@@ -40,7 +40,7 @@ app.post('/save', (req, res) => {
       }
   });
   // Read the existing player data from scores.json
-  fs.readFile('scores.json', 'utf8', (err, data) => {
+  fs.readFile('/var/data/scores.json', 'utf8', (err, data) => {
       if (err) {
           console.error('Error reading scores.json:', err);
           return res.status(500).json({ error: 'Internal server error' });
