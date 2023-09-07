@@ -101,13 +101,6 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <!-- Add game form goes here -->
       <h2>Add Game</h2>
-      Winning Team:
-      <br>
-      <label for="team1">Team 1:</label>
-      <input type="radio" id="team1" name="team" value="Team 1">
-      <label for="team2">Team 2:</label>
-      <input type="radio" id="team2" name="team" value="Team 2">
-
       <h3>Players:</h3>
       <table>
         <thead>
@@ -186,8 +179,8 @@
                     <td>
                         <select>
                             <option value="No game">No game</option>
-                            <option value="Team 1">Team 1</option>
-                            <option value="Team 2">Team 2</option>
+                            <option value="Team 1">Winner</option>
+                            <option value="Team 2">Loser</option>
                         </select>
                     </td>
                 `;
@@ -198,8 +191,6 @@
     
  // Function to save the game
 function saveGame() {
-    const selectedTeam = document.querySelector('input[name="team"]:checked').value;
-
     const playerRows = document.querySelectorAll('#playerTableBody tr');
     const winners = [];
     const players = [];
@@ -211,7 +202,7 @@ console.log(selectedPlayerTeam);
         if (selectedPlayerTeam === 'Team 1' || selectedPlayerTeam === 'Team 2') {
           players.push(playerName)
             // Only include players who have selected a team
-            if (selectedPlayerTeam === selectedTeam) {
+            if (selectedPlayerTeam === 'Team 1') {
                 winners.push(playerName);
             }
         }

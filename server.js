@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
-  res.sendFile(path.join(__dirname +'/scores.json'), (err) => {
+  res.sendFile(path.join('/var/data/scores.json'), (err) => {
     if (err) {
       console.error("Error serving json:", err);
       res.status(404).send("JSON   not found");
