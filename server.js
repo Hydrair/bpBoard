@@ -23,7 +23,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/users", (req, res) => {
-  res.sendFile(path.join('/var/data/scores.json'), (err) => {
+  res.sendFile(path.join(__dirname +'/stats/scores.json'), (err) => {
     if (err) {
       console.error("Error serving json:", err);
       res.status(404).send("JSON   not found");
@@ -40,7 +40,7 @@ app.post('/save', (req, res) => {
       }
   });
   // Read the existing player data from scores.json
-  fs.readFile('/var/data/scores.json', 'utf8', (err, data) => {
+  fs.readFile(path.join(__dirname +'/stats/scores.json'), 'utf8', (err, data) => {
       if (err) {
           console.error('Error reading scores.json:', err);
           return res.status(500).json({ error: 'Internal server error' });
